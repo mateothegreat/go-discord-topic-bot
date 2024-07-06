@@ -1,6 +1,6 @@
 # Topics Bot
 
-<video controls src="CleanShot 2024-07-06 at 00.28.28.mp4" title="Title"></video>
+![demo](demo.gif)
 
 ## Permissions
 
