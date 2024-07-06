@@ -6,8 +6,16 @@ import (
 )
 
 func init() {
-	commands.Add(discordgo.ApplicationCommand{
+	commands.AddCommand(discordgo.ApplicationCommand{
 		Name:        "topics",
 		Description: "Topics",
+		Type:        discordgo.ChatApplicationCommand,
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "suggest",
+				Description: "Suggest a topic",
+			},
+		},
 	})
 }

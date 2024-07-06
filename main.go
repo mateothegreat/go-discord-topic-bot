@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
@@ -35,7 +34,6 @@ func main() {
 		Format: multilog.FormatText,
 	}))
 
-	ResultsChannel := os.Getenv("DISCORD_CHANNEL_ID")
 	AppID := os.Getenv("DISCORD_APP_ID")
 	GuildID := os.Getenv("DISCORD_GUILD_ID")
 
@@ -53,54 +51,28 @@ func main() {
 				"type":  i.Type,
 				"name:": fmt.Sprintf("%s-%s", i.ApplicationCommandData().Name, i.ApplicationCommandData().Options[0].Name),
 			})
-			commands.Handlers[fmt.Sprintf("%s-%s", i.ApplicationCommandData().Name, i.ApplicationCommandData().Options[0].Name)](s, i)
+			commands.Handlers[fmt.Sprintf("%s-%s", i.ApplicationCommandData().Name, i.ApplicationCommandData().Options[0].Name)].Fn(s, i)
+		// Handle button clicks.
+		case discordgo.InteractionMessageComponent:
+			commands.Responders[i.Interaction.Data.(discordgo.MessageComponentInteractionData).CustomID].Fn(s, i)
 		// Handle modal submissions.
 		case discordgo.InteractionModalSubmit:
-			err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Thank you for taking your time to suggest a topic, we'll check it out in a bit!",
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
-			if err != nil {
-				multilog.Error("main", "respond to interaction", map[string]interface{}{
-					"error": err,
-				})
-			}
-
-			data := i.ModalSubmitData()
-
-			if !strings.HasPrefix(data.CustomID, "topics_suggest") {
-				return
-			}
-
-			userid := strings.Split(data.CustomID, "_")[2]
-			_, err = s.ChannelMessageSend(ResultsChannel, fmt.Sprintf(
-				"New topic suggestion received. From <@%s>\n\n**Title**:\n%s\n\n**Description**:\n%s",
-				userid,
-				data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value,
-				data.Components[1].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value,
-			))
-			if err != nil {
-				panic(err)
-			}
+			commands.Responders[i.Interaction.Data.(discordgo.ModalSubmitInteractionData).CustomID].Fn(s, i)
 		}
 	})
 
 	// IDs of the commands we've registered with discord for tear down on exit.
-	discordCommandIDs := make(map[string]string, len(commands.Commands))
+	createdCommandIDs := make([]string, len(commands.Commands))
 
 	// Register the commands with discord.
 	for _, cmd := range commands.Commands {
-		rcmd, err := s.ApplicationCommandCreate(AppID, GuildID, &cmd)
+		res, err := s.ApplicationCommandCreate(AppID, GuildID, &cmd)
 		if err != nil {
 			multilog.Error("main", "register discord command", map[string]interface{}{
 				"error": err,
 			})
 		}
-
-		discordCommandIDs[rcmd.ID] = rcmd.Name
+		createdCommandIDs = append(createdCommandIDs, res.ID)
 	}
 
 	// Open the discord session.
@@ -120,7 +92,7 @@ func main() {
 	multilog.Info("main", "gracefully shutting down", map[string]interface{}{})
 
 	// Delete the commands we registered with discord above.
-	for id, _ := range discordCommandIDs {
+	for _, id := range createdCommandIDs {
 		err := s.ApplicationCommandDelete(AppID, GuildID, id)
 		if err != nil {
 			multilog.Error("main", "delete discord command", map[string]interface{}{
