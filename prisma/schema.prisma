@@ -1,0 +1,36 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URI")
+}
+
+generator db {
+  provider = "go run github.com/steebchen/prisma-client-go"
+}
+
+model Topic {
+  ID          String       @id @default(cuid()) @db.VarChar(25)
+  created     DateTime     @default(now()) @db.Timestamptz()
+  updated     DateTime     @updatedAt @db.Timestamptz()
+  published   DateTime?    @db.Timestamptz()
+  title       String
+  description String
+  status      String       @default("draft") @db.VarChar(30)
+  suggestion  Suggestion[]
+
+  @@map("topics")
+}
+
+model Suggestion {
+  ID          String   @id @default(cuid()) @db.VarChar(25)
+  created     DateTime @default(now()) @db.Timestamptz()
+  updated     DateTime @updatedAt @db.Timestamptz()
+  status      String   @default("draft") @db.VarChar(30)
+  userID      String
+  userName    String
+  title       String
+  description String
+  topic       Topic?   @relation(fields: [topicID], references: [ID])
+  topicID     String?
+
+  @@map("suggestions")
+}

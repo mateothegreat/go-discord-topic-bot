@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -10,17 +9,17 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 	"github.com/mateothegreat/go-discord-topic-bot/commands"
+	"github.com/mateothegreat/go-discord-topic-bot/database"
 	"github.com/mateothegreat/go-multilog/multilog"
 )
 
 var s *discordgo.Session
 
 func init() {
-	flag.Parse()
-}
-
-func init() {
 	godotenv.Load()
+
+	database.Connect()
+
 	var err error
 	s, err = discordgo.New("Bot " + os.Getenv("DISCORD_TOKEN"))
 	if err != nil {
@@ -36,11 +35,6 @@ func main() {
 
 	AppID := os.Getenv("DISCORD_APP_ID")
 	GuildID := os.Getenv("DISCORD_GUILD_ID")
-
-	// Handle the bot being ready.
-	s.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		multilog.Info("main", "bot is up", nil)
-	})
 
 	// Handle interactions.
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {

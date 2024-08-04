@@ -7,6 +7,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/mateothegreat/go-discord-topic-bot/config"
+	"github.com/mateothegreat/go-discord-topic-bot/suggestions"
 	"github.com/mateothegreat/go-discord-topic-bot/util"
 	"github.com/mateothegreat/go-multilog/multilog"
 )
@@ -74,6 +75,7 @@ func TopicsSuggestResponder(s *discordgo.Session, i *discordgo.InteractionCreate
 		multilog.Error("TopicsSuggestResponder", "respond to interaction", map[string]interface{}{
 			"error": err,
 		})
+		return
 	}
 
 	data := i.ModalSubmitData()
@@ -82,6 +84,19 @@ func TopicsSuggestResponder(s *discordgo.Session, i *discordgo.InteractionCreate
 		return
 	}
 
+	suggestion, err := suggestions.Create(suggestions.CreateArgs{
+		UserID:      i.Member.User.ID,
+		UserName:    i.Member.User.Username,
+		Title:       data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value,
+		Description: data.Components[1].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value,
+	})
+	if err != nil {
+		multilog.Error("TopicsSuggestResponder", "create suggestion", map[string]interface{}{
+			"error": err,
+		})
+		return
+
+	}
 	_, err = s.ChannelMessageSendComplex(config.Config.TopicsSuggestionsChannelID, &discordgo.MessageSend{
 		Content: fmt.Sprintf("New topic suggestion received from <@%s>", i.Member.User.ID),
 		Embeds: []*discordgo.MessageEmbed{
@@ -91,12 +106,12 @@ func TopicsSuggestResponder(s *discordgo.Session, i *discordgo.InteractionCreate
 				Fields: []*discordgo.MessageEmbedField{
 					{
 						Name:   "Title",
-						Value:  data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value,
+						Value:  suggestion.Title,
 						Inline: false,
 					},
 					{
 						Name:   "Description",
-						Value:  data.Components[1].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value,
+						Value:  suggestion.Description,
 						Inline: false,
 					},
 				},
