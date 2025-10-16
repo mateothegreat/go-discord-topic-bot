@@ -38,6 +38,8 @@ func main() {
 
 	// Handle interactions.
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		log.Printf("i.Interaction.ID: %s, i.Interaction.Type: %s, i.Interaction.Data: %v", i.Interaction.ID, i.Type, i.Interaction.Data.Type().String())
+
 		switch i.Type {
 		// Handle slash commands.
 		case discordgo.InteractionApplicationCommand:
@@ -48,7 +50,27 @@ func main() {
 			commands.Handlers[fmt.Sprintf("%s-%s", i.ApplicationCommandData().Name, i.ApplicationCommandData().Options[0].Name)].Fn(s, i)
 		// Handle button clicks.
 		case discordgo.InteractionMessageComponent:
-			commands.Responders[i.Interaction.Data.(discordgo.MessageComponentInteractionData).CustomID].Fn(s, i)
+			if i.Interaction.Data != nil {
+				data, ok := i.Interaction.Data.(discordgo.MessageComponentInteractionData)
+				if ok && data.CustomID != "" {
+					if responder, exists := commands.Responders[data.CustomID]; exists {
+						responder.Fn(s, i)
+					} else {
+						multilog.Error("main", "no responder found for CustomID", map[string]interface{}{
+							"interaction_id": i.Interaction.ID,
+							"custom_id":      data.CustomID,
+						})
+					}
+				} else {
+					multilog.Error("main", "interaction data type assertion failed or CustomID is empty", map[string]interface{}{
+						"interaction_id": i.Interaction.ID,
+					})
+				}
+			} else {
+				multilog.Error("main", "interaction data is nil", map[string]interface{}{
+					"interaction_id": i.Interaction.ID,
+				})
+			}
 		// Handle modal submissions.
 		case discordgo.InteractionModalSubmit:
 			commands.Responders[i.Interaction.Data.(discordgo.ModalSubmitInteractionData).CustomID].Fn(s, i)

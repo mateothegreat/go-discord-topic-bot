@@ -51,6 +51,27 @@ func (c *CustomID) JSON() string {
 	return string(json)
 }
 
+// Add commands to the commands map.
+func init() {
+	AddCommand(discordgo.ApplicationCommand{
+		Name:        "topics",
+		Description: "Topics",
+		Type:        discordgo.ChatApplicationCommand,
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "suggest",
+				Description: "Suggest a topic",
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+				Name:        "list",
+				Description: "List topics",
+			},
+		},
+	})
+}
+
 // AddCommand adds a command to the commands map.
 //
 // Arguments:

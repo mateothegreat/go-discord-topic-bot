@@ -16,8 +16,7 @@ type CreateArgs struct {
 
 func Create(args CreateArgs) (*db.TopicModel, error) {
 	res, err := database.DatabaseClient.Topic.CreateOne(
-		db.Topic.
-			db.Topic.Title.Set(args.Title),
+		db.Topic.Title.Set(args.Title),
 		db.Topic.Description.Set(args.Description),
 		db.Topic.Title.Set(args.Title),
 		db.Topic.Description.Set(args.Description),
